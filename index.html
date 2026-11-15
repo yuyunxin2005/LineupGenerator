@@ -1422,6 +1422,7 @@ function solve() {
       $('#emptyState').classList.add('hidden');
       $('#result').classList.remove('hidden');
       syncResultHeight();
+      window.scrollTo(0, 0);
     } catch (error) {
       console.error(error);
       setStatus('求解失败：' + error.message);
@@ -1788,7 +1789,7 @@ function renderPresetList() {
     const items = groupPresets(group).map(preset => {
       const bond = bondById.get(preset.bondId);
       return '<label class="preset-item" title="勾选加入条件：' + esc(bond.name) + ' ≥ ' + preset.targetCount + '">' +
-        '<input type="checkbox" data-preset="' + esc(preset.bondId) + '">' +
+        '<input type="checkbox" data-preset="' + esc(preset.bondId) + '" data-preset-count="' + preset.targetCount + '">' +
         '<span>' + esc(bond.name) + '</span>' +
         '<span class="preset-target">≥ ' + preset.targetCount + '</span>' +
       '</label>';
@@ -1806,17 +1807,19 @@ function renderPresetList() {
 }
 
 function syncPresetChecks() {
-  const active = new Set(state.targets.map(t => t.bondId));
+  const active = new Map(state.targets.map(t => [t.bondId, t.targetCount]));
 
   document.querySelectorAll('[data-preset]').forEach(checkbox => {
-    checkbox.checked = active.has(checkbox.getAttribute('data-preset'));
+    const bondId = checkbox.getAttribute('data-preset');
+    const count = Number(checkbox.getAttribute('data-preset-count'));
+    checkbox.checked = active.get(bondId) === count;
   });
 
   document.querySelectorAll('[data-preset-group]').forEach(groupCheckbox => {
     const group = presetGroupById.get(groupCheckbox.getAttribute('data-preset-group'));
     if (!group) return;
     const presets = groupPresets(group);
-    const onCount = presets.filter(preset => active.has(preset.bondId)).length;
+    const onCount = presets.filter(preset => active.get(preset.bondId) === preset.targetCount).length;
     groupCheckbox.checked = presets.length > 0 && onCount === presets.length;
     groupCheckbox.indeterminate = onCount > 0 && onCount < presets.length;
     const countEl = groupCheckbox.closest('.preset-group').querySelector('.group-count');
@@ -1911,13 +1914,16 @@ function bindEvents() {
       const group = presetGroupById.get(groupCheckbox.getAttribute('data-preset-group'));
       if (!group) return;
       const presets = groupPresets(group);
+      const groupCounts = new Map(presets.map(preset => [preset.bondId, preset.targetCount]));
       if (groupCheckbox.checked) {
+        state.targets = state.targets.filter(target => !groupCounts.has(target.bondId));
         state.targets = normalizeTargets(state.targets.concat(
           presets.map(preset => ({ bondId: preset.bondId, targetCount: preset.targetCount }))
         ));
       } else {
-        const groupBonds = new Set(presets.map(preset => preset.bondId));
-        state.targets = state.targets.filter(target => !groupBonds.has(target.bondId));
+        state.targets = state.targets.filter(target =>
+          !(groupCounts.has(target.bondId) && groupCounts.get(target.bondId) === target.targetCount)
+        );
       }
       renderTargetEditor();
       return;
@@ -1926,12 +1932,13 @@ function bindEvents() {
     const checkbox = event.target.closest('[data-preset]');
     if (!checkbox) return;
     const bondId = checkbox.getAttribute('data-preset');
-    const preset = rewardPresetMap.get(bondId);
-    if (preset == null) return;
+    const presetCount = Number(checkbox.getAttribute('data-preset-count'));
+    if (!Number.isFinite(presetCount)) return;
     if (checkbox.checked) {
-      state.targets = normalizeTargets(state.targets.concat({ bondId, targetCount: preset }));
-    } else {
       state.targets = state.targets.filter(t => t.bondId !== bondId);
+      state.targets = normalizeTargets(state.targets.concat({ bondId, targetCount: presetCount }));
+    } else {
+      state.targets = state.targets.filter(t => !(t.bondId === bondId && t.targetCount === presetCount));
     }
     renderTargetEditor();
   });
