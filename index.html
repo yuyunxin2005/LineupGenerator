@@ -1,0 +1,2050 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>货币战争 · 阵容求解器</title>
+<style>
+  :root {
+    --bg: #f5f3fb;
+    --card: #ffffff;
+    --line: #e8e2f5;
+    --line-soft: #f0ecfa;
+    --text: #221b38;
+    --muted: #817991;
+    --accent: #7253e8;
+    --accent-2: #9a7bff;
+    --accent-soft: #f0ebff;
+    --gold: #b8860b;
+    --danger: #c0392b;
+    --shadow: 0 10px 28px rgba(65, 45, 120, .07);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; }
+  img { display: block; }
+
+  .topbar {
+    max-width: 1520px;
+    margin: 0 auto;
+    padding: 26px 26px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .logo {
+    width: 46px; height: 46px; border-radius: 14px;
+    background: linear-gradient(135deg, #8263ff, #5b3bd6);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; flex: none;
+    box-shadow: 0 8px 18px rgba(100, 70, 220, .28);
+  }
+  .brand h1 { margin: 0; font-size: 20px; letter-spacing: .2px; }
+  .brand p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); }
+  .top-badge {
+    font-size: 12px; color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid #ddd2ff;
+    padding: 6px 10px; border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .layout {
+    max-width: 1520px;
+    margin: 0 auto;
+    padding: 0 26px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .result-area { display: contents; }
+  .result { order: -1; }
+  .band-top, .band-bottom { padding: 18px; }
+  .band-grid {
+    display: grid;
+    gap: 18px;
+    align-items: start;
+  }
+  .band-top .band-grid { grid-template-columns: 600px minmax(0, 1fr); }
+  .band-bottom .band-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); }
+  .band-top .condition-panel {
+    border-left: 1px dashed var(--line-soft);
+    padding-left: 18px;
+  }
+  .band-bottom .result-side {
+    border-left: 1px dashed var(--line-soft);
+    padding-left: 18px;
+  }
+  .condition-chars {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .condition-chars.matched { overflow: hidden; }
+  .condition-chars.matched .pool-grid {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
+  .condition-panel { min-width: 0; }
+  .condition-panel-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+    gap: 18px;
+    align-items: stretch;
+  }
+  .condition-basic {
+    min-width: 0;
+    border-left: 1px dashed var(--line-soft);
+    padding-left: 18px;
+  }
+  .condition-options {
+    min-width: 0;
+    order: -1;
+  }
+  .merged-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .merged-panel.matched { overflow: hidden; }
+  .result-panel {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .result-panel::-webkit-scrollbar { width: 8px; }
+  .result-panel::-webkit-scrollbar-thumb { background: #ded6f0; border-radius: 99px; }
+  .result-side { min-width: 0; }
+  .result-side .unit-card { width: 78px; }
+  .result-tabs {
+    display: flex;
+    gap: 4px;
+    background: #f3f0fb;
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+  }
+  .result-tabs button {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 8px 6px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background .15s, color .15s, box-shadow .15s;
+  }
+  .result-tabs button.active {
+    background: #fff;
+    color: var(--accent);
+    box-shadow: 0 2px 8px rgba(80, 55, 160, .10);
+  }
+  .result-panel-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 10px;
+    min-height: 24px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    margin: 0 0 14px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .card-title .sub { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12.5px; font-weight: 600; color: #5d5470;
+    margin-bottom: 7px;
+  }
+  .field-label .hint { font-weight: 400; color: var(--muted); font-size: 11.5px; }
+  .input, .select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd5ef;
+    border-radius: 11px;
+    background: #fbfaff;
+    color: var(--text);
+    outline: none;
+    font-size: 14px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .input:focus, .select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(114, 83, 232, .12);
+  }
+  .segmented {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    background: #f3f0fb;
+    padding: 4px;
+    border-radius: 12px;
+  }
+  .segmented label { position: relative; cursor: pointer; }
+  .segmented input { position: absolute; opacity: 0; pointer-events: none; }
+  .segmented span {
+    display: block;
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 8px 6px;
+    border-radius: 9px;
+    transition: background .15s, color .15s, box-shadow .15s;
+  }
+  .segmented input:checked + span {
+    background: #fff;
+    color: var(--accent);
+    box-shadow: 0 2px 8px rgba(80, 55, 160, .10);
+  }
+  .segmented.three { grid-template-columns: repeat(3, 1fr); }
+  .segmented.three span { font-size: 11.5px; padding: 8px 3px; }
+  .btn-row { display: flex; gap: 9px; margin-top: 16px; }
+  .btn {
+    border: 0;
+    border-radius: 11px;
+    padding: 11px 14px;
+    font-weight: 700;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: transform .1s, box-shadow .15s, background .15s;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary {
+    flex: 1;
+    color: #fff;
+    background: linear-gradient(135deg, #7b5cf0, #5b3bd6);
+    box-shadow: 0 8px 16px rgba(100, 70, 220, .24);
+  }
+  .btn-primary:hover { box-shadow: 0 10px 20px rgba(100, 70, 220, .32); }
+  .btn-ghost {
+    color: #625a78;
+    background: #f4f1fb;
+    border: 1px solid #e5def5;
+  }
+  .status { min-height: 17px; margin-top: 9px; font-size: 12.5px; color: var(--danger); }
+
+  .pool-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .pool-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .pool-search { position: relative; margin-bottom: 10px; }
+  .pool-search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #9b92ae; }
+  .pool-search .input { padding-left: 34px; }
+  .pool-legend { font-size: 11.5px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
+  .pool-actions { display: flex; gap: 6px; margin-bottom: 10px; }
+  .mini-btn {
+    border: 1px solid #e4ddf3; background: #faf8ff; color: #655b7a;
+    border-radius: 8px; padding: 5px 8px; font-size: 11.5px; cursor: pointer;
+  }
+  .mini-btn:hover { border-color: #cfc3ee; color: var(--accent); }
+  .mini-btn.active { border-color: #cfc3ee; color: var(--accent); background: var(--accent-soft); }
+  .star-view { display: flex; gap: 6px; }
+  .section-tools { display: flex; align-items: center; gap: 8px; }
+
+  .pool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    grid-auto-rows: max-content;
+    align-content: start;
+    gap: 8px;
+    max-height: 420px;
+    overflow: auto;
+    padding-right: 4px;
+  }
+  .pool-grid::-webkit-scrollbar { width: 8px; }
+  .pool-grid::-webkit-scrollbar-thumb { background: #ded6f0; border-radius: 99px; }
+
+  .char-card {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    cursor: pointer;
+    transition: opacity .15s, border-color .15s, box-shadow .15s, transform .1s;
+  }
+  .char-card:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(70, 50, 130, .10); }
+  .char-card img { width: 100%; aspect-ratio: 193 / 269; object-fit: cover; }
+  .char-card.disabled { opacity: .38; filter: grayscale(1); }
+  .char-card.pinned {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(114, 83, 232, .55) inset;
+  }
+  .cost-badge {
+    position: absolute; top: 5px; left: 5px;
+    background: rgba(24, 18, 44, .74);
+    color: #ffd979;
+    font-size: 10.5px; font-weight: 800;
+    padding: 2px 6px; border-radius: 999px;
+    letter-spacing: .2px;
+  }
+  .pin-btn {
+    position: absolute; top: 5px; right: 5px;
+    width: 24px; height: 24px;
+    border: 0; border-radius: 50%;
+    background: rgba(255, 255, 255, .9);
+    color: #6f6785;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(40, 25, 80, .18);
+  }
+  .char-card.pinned .pin-btn { color: var(--accent); background: #fff; }
+  .pin-btn svg { width: 13px; height: 13px; }
+  .char-meta { padding: 6px 7px 7px; }
+  .char-name { font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .char-bonds { margin-top: 3px; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .empty-state { text-align: center; padding: 64px 24px; }
+  .empty-icon {
+    width: 62px; height: 62px; margin: 0 auto 14px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #f1ecff, #e4dbff);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .empty-state h2 { margin: 0 0 6px; font-size: 18px; }
+  .empty-state p { margin: 0 auto; max-width: 520px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .stat {
+    background: linear-gradient(180deg, #fbf9ff, #f7f3ff);
+    border: 1px solid #eee8fa;
+    border-radius: 13px;
+    padding: 12px 13px;
+  }
+  .stat-value { font-size: 25px; font-weight: 800; color: #382b6d; line-height: 1.1; }
+  .stat-value span { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .stat-label { margin-top: 4px; font-size: 11.5px; color: var(--muted); }
+  .summary-sub { margin-top: 11px; font-size: 11.5px; color: var(--muted); }
+
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 13px; }
+  .section-head h3 { margin: 0; font-size: 14px; }
+  .section-head .meta { font-size: 11.5px; color: var(--muted); }
+
+  .board { display: flex; flex-direction: column; gap: 14px; }
+  .board-row { display: flex; flex-direction: column; gap: 8px; }
+  .row-label {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 11.5px; font-weight: 700; color: #6f6588;
+  }
+  .row-label .row-count {
+    font-size: 10px; font-weight: 800; color: var(--accent);
+    background: var(--accent-soft); border-radius: 999px; padding: 1px 7px;
+  }
+  .row-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .unit-card {
+    width: 84px; flex: none;
+    border: 1px solid var(--line); border-radius: 11px;
+    background: #fff; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .unit-card.empty { border-style: dashed; background: #fbfaff; }
+  .unit-img { width: 100%; aspect-ratio: 193 / 269; object-fit: cover; background: #f4f1fb; }
+  .unit-img.empty { display: flex; align-items: center; justify-content: center; color: #b7aecd; font-size: 10px; }
+  .unit-stars { display: flex; justify-content: center; gap: 4px; padding: 5px 4px; }
+  .unit-star { width: 22px; height: 22px; border-radius: 5px; object-fit: cover; flex: none; }
+  .unit-star.empty { border: 1px dashed #ddd5ef; background: #fbfaff; }
+  .unit-detail { display: none; height: 100px; overflow: hidden; border-top: 1px dashed var(--line-soft); padding: 5px 6px; }
+  .board.show-detail .unit-detail { display: block; }
+  .board.show-detail .unit-card { width: 104px; }
+  .unit-detail-name { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 10.5px; font-weight: 800; }
+  .unit-detail-name .cost { font-size: 9px; color: var(--gold); font-weight: 700; }
+  .unit-detail-bonds { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+  .unit-detail-bonds .chip { font-size: 8.5px; padding: 1px 4px; }
+  .unit-detail-slots { margin-top: 3px; font-size: 9px; color: var(--muted); line-height: 1.45; }
+  .chip {
+    display: inline-flex; align-items: center;
+    background: var(--accent-soft); color: #5b41c8;
+    border-radius: 999px; padding: 2px 6px;
+    font-size: 10px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .mini-star { width: 16px; height: 16px; border-radius: 4px; object-fit: cover; flex: none; }
+  .muted { color: var(--muted); font-size: 12px; }
+
+  .bond-row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 34px;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--line-soft);
+  }
+  .bond-row:last-child { border-bottom: 0; }
+  .bond-icon { width: 36px; height: 36px; border-radius: 9px; object-fit: cover; background: #f2edff; }
+  .bond-icon.no-star {
+    display: flex; align-items: center; justify-content: center;
+    color: #9a8fb5; font-size: 14px; font-weight: 800;
+    background: #f4f1fb;
+  }
+  .bond-main { min-width: 0; }
+  .bond-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .bond-name { font-size: 12.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bond-level {
+    flex: none; font-size: 10.5px; font-weight: 800;
+    color: #fff; background: linear-gradient(135deg, #8a6bfa, #6847dc);
+    border-radius: 999px; padding: 2px 7px;
+  }
+  .progress {
+    position: relative;
+    height: 7px;
+    background: #efebf9;
+    border-radius: 999px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #9b7bff, #6b49e0);
+    transition: width .3s ease;
+  }
+  .progress-tick {
+    position: absolute; top: 0; width: 1px; height: 7px;
+    background: rgba(255, 255, 255, .7);
+  }
+  .bond-thresholds { display: flex; align-items: center; gap: 3px; margin-top: 5px; font-size: 10.5px; color: #9b92ae; }
+  .bond-thresholds span.done { color: #6b49e0; font-weight: 700; }
+  .bond-thresholds span.next { color: #c17d00; font-weight: 800; }
+  .bond-count { margin-left: auto; color: #6f6588; }
+  .contributors { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .contrib-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #f7f4ff; border: 1px solid #eee8fa;
+    border-radius: 999px; padding: 2px 6px 2px 3px;
+    font-size: 10px; color: #62577c;
+  }
+  .contrib-chip.granted { background: #fff8e8; border-color: #f3e3bd; color: #8a6510; }
+  .avatar { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }
+  .bond-total { text-align: right; font-size: 16px; font-weight: 800; color: #4b3d7d; }
+
+  .star-group {
+    border: 1px solid #eee8fa;
+    border-radius: 13px;
+    padding: 11px 12px;
+    margin-bottom: 9px;
+    background: linear-gradient(180deg, #fff, #fcfaff);
+  }
+  .star-group:last-child { margin-bottom: 0; }
+  .star-group-head { display: flex; align-items: center; gap: 10px; }
+  .star-icon { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; background: #f2edff; }
+  .star-group-title { font-size: 12.5px; font-weight: 800; }
+  .star-count { color: var(--accent); }
+  .star-group-sub { margin-top: 2px; font-size: 11px; color: var(--muted); }
+  .star-host-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+  .star-host {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #f7f4ff; border: 1px solid #eee8fa;
+    border-radius: 999px; padding: 3px 8px 3px 3px;
+    font-size: 10.5px; color: #5e5377;
+  }
+  .star-host .avatar { width: 20px; height: 20px; }
+  .star-compact { display: flex; flex-wrap: wrap; gap: 8px; }
+  .star-compact-item {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #f7f4ff; border: 1px solid #eee8fa;
+    border-radius: 10px; padding: 4px 9px 4px 4px;
+  }
+  .star-compact-item img { width: 30px; height: 30px; border-radius: 7px; object-fit: cover; }
+  .star-compact-count { font-size: 13px; font-weight: 800; color: #5b41c8; }
+
+  .notes { font-size: 11.5px; color: #746b88; line-height: 1.75; background: #fbfaff; }
+  .notes div + div { margin-top: 4px; }
+
+  .check-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; color: #5d5470;
+    cursor: pointer; user-select: none;
+  }
+  .check-row input {
+    width: 16px; height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .target-editor {
+    margin-top: 10px; padding: 10px;
+    border: 1px solid #eee8fa; border-radius: 12px;
+    background: #fbfaff;
+  }
+  .target-inputs { display: grid; grid-template-columns: 1.35fr 1fr; gap: 6px; }
+  .target-inputs .select { padding: 8px 9px; font-size: 12px; }
+  .target-add { width: 100%; margin-top: 7px; }
+  .preset-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 7px; }
+  .preset-note { font-size: 10px; color: #9a92a8; }
+  .preset-list {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-top: 7px; max-height: 260px; overflow-y: auto; padding-right: 2px;
+  }
+  .preset-group {
+    border: 1px solid #eee8fa;
+    border-radius: 10px;
+    padding: 7px 8px;
+    background: #fdfcff;
+  }
+  .preset-group-head {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 800; color: #4b3d7d;
+    cursor: pointer; user-select: none;
+  }
+  .preset-group-head input { width: 15px; height: 15px; flex: none; accent-color: var(--accent); cursor: pointer; }
+  .preset-group-head .group-count { margin-left: auto; font-size: 10.5px; color: #8a7fa5; font-weight: 600; }
+  .preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 3px 8px;
+    margin-top: 6px;
+  }
+  .preset-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 6px; border-radius: 8px;
+    font-size: 11.5px; color: #5d5470; cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .preset-item:hover { background: #f4f0ff; }
+  .preset-item:has(input:checked) {
+    background: var(--accent-soft);
+    border-color: #ddd2ff;
+    color: #5b41c8;
+    font-weight: 700;
+  }
+  .preset-item input { width: 14px; height: 14px; flex: none; accent-color: var(--accent); }
+  .preset-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .preset-item .preset-target { margin-left: auto; flex: none; font-size: 10.5px; color: #9a92a8; font-weight: 600; }
+  .preset-item:has(input:checked) .preset-target { color: #6b49e0; }
+  .target-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; max-height: 168px; overflow-y: auto; padding-right: 2px; }
+  .target-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #fff; border: 1px solid #e3d9fa; border-radius: 999px;
+    padding: 4px 7px; font-size: 11px; color: #5a3fd6;
+  }
+  .target-chip button {
+    border: 0; background: transparent; color: #9a8fb5;
+    cursor: pointer; font-size: 14px; line-height: 1; padding: 0;
+  }
+  .target-chip button:hover { color: var(--danger); }
+  .target-hint { margin-top: 7px; font-size: 10.5px; color: #9a92a8; line-height: 1.5; }
+  .target-result { padding: 10px 0; border-bottom: 1px dashed var(--line-soft); }
+  .target-result:last-child { border-bottom: 0; }
+  .target-result-title { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; }
+  .target-badge { font-size: 10px; font-weight: 800; border-radius: 999px; padding: 2px 6px; }
+  .target-badge.ok { color: #1f7a4d; background: #e6f7ee; }
+  .target-badge.miss { color: #b04444; background: #fdecec; }
+  .target-result-sub { margin-top: 3px; font-size: 11px; color: var(--muted); }
+  .target-mark {
+    display: inline-block; margin-left: 6px;
+    font-size: 9.5px; font-weight: 800;
+    color: #8a6510; background: #fff3d6;
+    border-radius: 999px; padding: 1px 5px; vertical-align: 1px;
+  }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 1400px) {
+    .condition-panel-grid { grid-template-columns: 1fr; }
+    .condition-basic {
+      border-left: 0;
+      padding-left: 0;
+      border-top: 1px dashed var(--line-soft);
+      padding-top: 16px;
+    }
+  }
+  @media (max-width: 1120px) {
+    .band-top .band-grid,
+    .band-bottom .band-grid { grid-template-columns: 1fr; }
+    .band-top .condition-panel,
+    .band-bottom .result-side {
+      border-left: 0;
+      padding-left: 0;
+      border-top: 1px dashed var(--line-soft);
+      padding-top: 16px;
+    }
+    .result-side { order: -1; }
+    .pool-grid { max-height: 360px; }
+    .result-side .unit-card { width: 84px; }
+  }
+  @media (max-width: 680px) {
+    .topbar { padding: 18px 16px 8px; }
+    .layout { padding: 0 16px 30px; }
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .brand h1 { font-size: 17px; }
+    .brand p { font-size: 11.5px; }
+    .top-badge { display: none; }
+    .row-cards { gap: 8px; }
+    .unit-card { width: 78px; }
+    .unit-star { width: 20px; height: 20px; }
+    .unit-detail { height: 100px; }
+    .board.show-detail .unit-card { width: 76px; }
+    .board.show-detail .unit-detail { height: 132px; }
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2.6l2.7 5.9 6.4.7-4.8 4.3 1.3 6.3L12 16.7 6.4 19.8l1.3-6.3-4.8-4.3 6.4-.7L12 2.6z" fill="currentColor"/>
+      </svg>
+    </div>
+    <div>
+      <h1>货币战争 · 阵容求解器</h1>
+      <p>选择条件，自动计算上阵角色、羁绊等级与所需星徽</p>
+    </div>
+  </div>
+  <div class="top-badge">本地启发式求解 · 无需联网</div>
+</header>
+
+<main class="layout">
+  <section class="card band-top">
+    <div class="band-grid">
+      <section class="condition-chars" id="characterPoolCard">
+        <div class="pool-head">
+          <h2 class="card-title" style="margin:0">角色池</h2>
+          <span id="poolCount" class="pool-count"></span>
+        </div>
+        <div class="pool-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input id="search" class="input" type="search" placeholder="搜索角色或羁绊">
+        </div>
+        <div class="pool-legend">
+          点击卡片可排除/恢复角色；点右上角图钉设为必选。必选角色一定会上阵。
+        </div>
+        <div class="pool-actions">
+          <button id="enableAll" class="mini-btn">全部启用</button>
+          <button id="disableAll" class="mini-btn">全部排除</button>
+        </div>
+        <div id="poolGrid" class="pool-grid"></div>
+      </section>
+
+      <section class="condition-panel" id="conditionPanel">
+      <div class="condition-panel-grid">
+        <section class="condition-basic">
+          <h3 class="card-title">求解设置 <span class="sub">先设人数与目标</span></h3>
+
+        <div class="field">
+          <div class="field-label"><span>上阵人数上限</span><span class="hint">最多 13 人</span></div>
+          <input id="maxUnits" class="input" type="number" min="1" max="13" value="13" inputmode="numeric">
+        </div>
+
+        <div class="field">
+          <div class="field-label"><span>目标</span><span class="hint">默认只满足指定条件</span></div>
+          <div class="segmented three">
+            <label><input type="radio" name="objective" value="maxLevels"><span>羁绊总等级</span></label>
+            <label><input type="radio" name="objective" value="maxKinds"><span>激活羁绊数</span></label>
+            <label><input type="radio" name="objective" value="targets" checked><span>只满足指定条件</span></label>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label"><span>求解强度</span></div>
+          <select id="mode" class="select">
+            <option value="fast">快速 · 贪心</option>
+            <option value="standard" selected>标准 · 贪心 + 局部搜索</option>
+            <option value="deep">深度 · 多次重启</option>
+          </select>
+        </div>
+
+        <div class="field hidden" id="selectedField">
+          <div class="field-label"><span>已选条件</span><span class="hint">点击 × 逐条删除</span></div>
+          <div id="targetList" class="target-list"></div>
+        </div>
+
+        <div class="btn-row">
+          <button id="solveBtn" class="btn btn-primary">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7L8 5z" fill="currentColor"/></svg>
+            开始求解
+          </button>
+          <button id="resetBtn" class="btn btn-ghost">重置</button>
+        </div>
+        <div id="status" class="status" role="status"></div>
+        </section>
+
+        <section class="condition-options">
+          <h3 class="card-title">条件选择 <span class="sub">勾选即加入</span></h3>
+
+      <div id="targetEditor">
+        <div class="field-label"><span>预设条件</span><span class="hint">勾选即加入条件</span></div>
+        <div class="preset-row">
+          <button id="presetAll" class="mini-btn" type="button">全选</button>
+          <button id="presetClear" class="mini-btn" type="button">全不选</button>
+          <span id="presetNote" class="preset-note"></span>
+        </div>
+        <div id="presetList" class="preset-list"></div>
+
+        <div class="field-label" style="margin-top:14px"><span>自定义条件</span><span class="hint">任意点数</span></div>
+        <div class="target-inputs">
+          <select id="targetBond" class="select"></select>
+          <input id="targetLevel" class="input" type="number" min="1" max="99" step="1" value="3" placeholder="目标点数" inputmode="numeric">
+        </div>
+        <button id="addTarget" class="mini-btn target-add">添加自定义条件</button>
+
+        <div class="target-hint">勾选上方预设条件即可加入，或手动添加任意点数；取消勾选、点 × 均可移除。职级条件未计入，千星商会按 3 名角色计。只会满足这些条件，不为其他羁绊加星徽或补人。</div>
+      </div>
+
+      <div id="targetEmpty" class="muted hidden">当前目标不需要指定条件，切换到“只满足指定条件”后可在此选择。</div>
+        </section>
+      </div>
+      </section>
+    </div>
+  </section>
+
+  <section class="result-area">
+    <div id="emptyState" class="card empty-state">
+      <div class="empty-icon">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+          <path d="M4 19V5m0 14h16M8 16V9m4 7V6m4 10v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2>设置条件后开始求解</h2>
+      <p>默认为“只满足指定条件”，最多上阵 13 人。先在左侧设置人数与目标，在右侧勾选预设条件（也可自由输入点数），再点击“开始求解”。</p>
+    </div>
+
+    <div id="result" class="result hidden" style="display:flex;flex-direction:column;gap:16px">
+      <section class="card band-bottom">
+        <div class="band-grid">
+          <section class="merged-panel" id="resultPanel">
+          <div class="result-tabs" id="resultTabs">
+            <button type="button" data-result-tab="bonds">羁绊结果</button>
+            <button type="button" data-result-tab="targets">指定条件</button>
+            <button type="button" data-result-tab="stars" class="active">星徽分配</button>
+          </div>
+
+          <div class="panel-block result-panel hidden" id="bondsPanel">
+            <div class="result-panel-toolbar">
+              <span id="bondsCount" class="meta"></span>
+            </div>
+            <div id="bonds"></div>
+          </div>
+
+          <div class="panel-block result-panel hidden" id="targetCard">
+            <div class="result-panel-toolbar">
+              <span id="targetMeta" class="meta"></span>
+            </div>
+            <div id="targetResults"></div>
+          </div>
+
+          <div class="panel-block result-panel" id="starsPanel">
+            <div class="result-panel-toolbar">
+              <div id="starView" class="star-view">
+                <button class="mini-btn" data-star-view="steps">分步</button>
+                <button class="mini-btn" data-star-view="summary">汇总</button>
+                <button class="mini-btn active" data-star-view="icons">图标</button>
+              </div>
+              <span id="starsCount" class="meta"></span>
+            </div>
+            <div id="stars"></div>
+          </div>
+          </section>
+
+          <section class="result-side" id="lineupCard">
+          <div class="section-head">
+            <h3>上阵角色</h3>
+            <div class="section-tools">
+              <button id="detailToggle" class="mini-btn" type="button">详细信息</button>
+              <span id="lineupMeta" class="meta"></span>
+            </div>
+          </div>
+          <div id="lineup" class="board"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="card" id="summary"></section>
+    </div>
+  </section>
+</main>
+
+<script>
+const PLUGIN = {"id":"currency-war","game":"货币战争","version":"1.0","slotRules":[],"bonds":[{"id":"幻月游戏","name":"幻月游戏","thresholds":[3,5,7,10]},{"id":"奇兽花园","name":"奇兽花园","thresholds":[3,5,7,10]},{"id":"仙舟舰队","name":"仙舟舰队","thresholds":[2,4,6,9]},{"id":"开拓银轨","name":"开拓银轨","thresholds":[2,4,6,8,10]},{"id":"千星商会","name":"千星商会","thresholds":[2]},{"id":"云上五骁","name":"云上五骁","thresholds":[2,3,4,5]},{"id":"星核猎手","name":"星核猎手","thresholds":[2,3,5,7]},{"id":"黄金大饭店","name":"黄金大饭店","thresholds":[2,3,4]},{"id":"梦境交织","name":"梦境交织","thresholds":[2,3,5]},{"id":"星间旅人","name":"星间旅人","thresholds":[1,2,3,4,5,6,7,8]},{"id":"小小巨人","name":"小小巨人","thresholds":[2,3,4,5,6]},{"id":"少女乐队","name":"少女乐队","thresholds":[1,4]},{"id":"连击","name":"连击","thresholds":[2,4,6,8]},{"id":"追击","name":"追击","thresholds":[3,5,7,10]},{"id":"持续伤害","name":"持续伤害","thresholds":[3,5,7,9]},{"id":"群攻","name":"群攻","thresholds":[2,4,6,8]},{"id":"击破","name":"击破","thresholds":[2,4,6,8]},{"id":"欢愉","name":"欢愉","thresholds":[3,5,6,8]},{"id":"反击","name":"反击","thresholds":[2,4,6]},{"id":"召唤","name":"召唤","thresholds":[2,4,6,8]},{"id":"能量","name":"能量","thresholds":[2,4,6]},{"id":"治疗","name":"治疗","thresholds":[2,4,6]},{"id":"守护","name":"守护","thresholds":[2,3]},{"id":"幻乐之主","name":"幻乐之主","thresholds":[1]},{"id":"双龙吟","name":"双龙吟","thresholds":[1]},{"id":"巡海游侠","name":"巡海游侠","thresholds":[1]},{"id":"机心巧匠","name":"机心巧匠","thresholds":[1]},{"id":"盗火行者","name":"盗火行者","thresholds":[1]},{"id":"黑市主理人","name":"黑市主理人","thresholds":[1]}],"characters":[{"id":"星神★阿哈","name":"星神★阿哈","bonds":["欢愉","幻乐之主"],"starSlots":3,"cost":7,"roles":["front"]},{"id":"卡芙卡","name":"卡芙卡","bonds":["星核猎手","持续伤害"],"starSlots":3,"cost":5,"roles":["front"]},{"id":"克拉拉","name":"克拉拉","bonds":["星间旅人","反击","机心巧匠"],"starSlots":3,"cost":5,"roles":["front","back"]},{"id":"丹恒·饮月","name":"丹恒·饮月","bonds":["开拓银轨","云上五骁","双龙吟"],"starSlots":3,"cost":5,"roles":["front"]},{"id":"雪衣","name":"雪衣","bonds":["仙舟舰队","击破"],"starSlots":3,"cost":5,"roles":["front"]},{"id":"翡翠","name":"翡翠","bonds":["千星商会","群攻","黑市主理人"],"starSlots":3,"cost":5,"roles":["back"]},{"id":"阿格莱雅","name":"阿格莱雅","bonds":["奇兽花园","连击"],"starSlots":3,"cost":5,"roles":["front"]},{"id":"白厄","name":"白厄","bonds":["黄金大饭店","盗火行者"],"starSlots":3,"cost":5,"roles":["front","back"]},{"id":"不死途","name":"不死途","bonds":["幻月游戏","追击","巡海游侠"],"starSlots":3,"cost":5,"roles":["back"]},{"id":"帕姆王","name":"帕姆王","bonds":["开拓银轨"],"starSlots":3,"cost":5,"roles":["back"]},{"id":"希露瓦","name":"希露瓦","bonds":["少女乐队","持续伤害"],"starSlots":3,"cost":4,"roles":["front"]},{"id":"刃","name":"刃","bonds":["云上五骁","反击"],"starSlots":3,"cost":4,"roles":["front","back"]},{"id":"寒鸦","name":"寒鸦","bonds":["仙舟舰队","连击"],"starSlots":3,"cost":4,"roles":["back"]},{"id":"藿藿","name":"藿藿","bonds":["小小巨人","能量","治疗"],"starSlots":3,"cost":4,"roles":["back"]},{"id":"砂金","name":"砂金","bonds":["星间旅人","追击","守护"],"starSlots":3,"cost":4,"roles":["front","back"]},{"id":"黄泉","name":"黄泉","bonds":["梦境交织","群攻"],"starSlots":3,"cost":4,"roles":["front"]},{"id":"缇宝","name":"缇宝","bonds":["小小巨人","追击"],"starSlots":3,"cost":4,"roles":["front","back"]},{"id":"风堇","name":"风堇","bonds":["奇兽花园","召唤","治疗"],"starSlots":3,"cost":4,"roles":["front","back"]},{"id":"昔涟","name":"昔涟","bonds":["黄金大饭店","召唤"],"starSlots":3,"cost":4,"roles":["front"]},{"id":"千冶·刃","name":"千冶·刃","bonds":["幻月游戏","星核猎手","群攻"],"starSlots":3,"cost":4,"roles":["front","back"]},{"id":"姬子·启行","name":"姬子·启行","bonds":["开拓银轨","能量"],"starSlots":3,"cost":4,"roles":["front"]},{"id":"砂金·戏浪","name":"砂金·戏浪","bonds":["千星商会","欢愉"],"starSlots":3,"cost":4,"roles":["front"]},{"id":"罗刹","name":"罗刹","bonds":["星间旅人","治疗"],"starSlots":3,"cost":3,"roles":["front","back"]},{"id":"符玄","name":"符玄","bonds":["小小巨人","反击","守护"],"starSlots":3,"cost":3,"roles":["back"]},{"id":"镜流","name":"镜流","bonds":["云上五骁","连击"],"starSlots":3,"cost":3,"roles":["front","back"]},{"id":"椒丘","name":"椒丘","bonds":["仙舟舰队","持续伤害"],"starSlots":3,"cost":3,"roles":["front"]},{"id":"飞霄","name":"飞霄","bonds":["仙舟舰队","追击"],"starSlots":3,"cost":3,"roles":["front"]},{"id":"乱破","name":"乱破","bonds":["少女乐队","击破"],"starSlots":3,"cost":3,"roles":["back"]},{"id":"大丽花","name":"大丽花","bonds":["梦境交织","击破"],"starSlots":3,"cost":3,"roles":["front","back"]},{"id":"赛飞儿","name":"赛飞儿","bonds":["奇兽花园","群攻"],"starSlots":2,"cost":3,"roles":["back"]},{"id":"遐蝶","name":"遐蝶","bonds":["黄金大饭店","召唤"],"starSlots":3,"cost":3,"roles":["front","back"]},{"id":"爻光","name":"爻光","bonds":["千星商会","欢愉"],"starSlots":3,"cost":3,"roles":["back"]},{"id":"银狼LV.999","name":"银狼LV.999","bonds":["幻月游戏","星核猎手","欢愉"],"starSlots":3,"cost":3,"roles":["front"]},{"id":"开拓者","name":"开拓者","bonds":["开拓银轨","星核猎手","能量"],"starSlots":3,"cost":3,"roles":["front","back"]},{"id":"娜塔莎","name":"娜塔莎","bonds":["星间旅人","持续伤害","治疗"],"starSlots":3,"cost":2,"roles":["back"]},{"id":"白露","name":"白露","bonds":["云上五骁","连击","治疗"],"starSlots":3,"cost":2,"roles":["back"]},{"id":"云璃","name":"云璃","bonds":["仙舟舰队","反击"],"starSlots":3,"cost":2,"roles":["front","back"]},{"id":"花火","name":"花火","bonds":["小小巨人","梦境交织","欢愉"],"starSlots":3,"cost":2,"roles":["front"]},{"id":"知更鸟","name":"知更鸟","bonds":["少女乐队","追击"],"starSlots":3,"cost":2,"roles":["front"]},{"id":"流萤","name":"流萤","bonds":["星核猎手","击破"],"starSlots":3,"cost":2,"roles":["front"]},{"id":"星期日","name":"星期日","bonds":["幻月游戏","开拓银轨","连击"],"starSlots":3,"cost":2,"roles":["front","back"]},{"id":"大黑塔","name":"大黑塔","bonds":["星间旅人","群攻"],"starSlots":3,"cost":2,"roles":["front"]},{"id":"万敌","name":"万敌","bonds":["奇兽花园","黄金大饭店","反击"],"starSlots":3,"cost":2,"roles":["front","back"]},{"id":"海瑟音","name":"海瑟音","bonds":["奇兽花园","持续伤害"],"starSlots":3,"cost":2,"roles":["front","back"]},{"id":"绯英","name":"绯英","bonds":["幻月游戏","能量"],"starSlots":3,"cost":2,"roles":["front","back"]},{"id":"知更鸟·晴歌","name":"知更鸟·晴歌","bonds":["千星商会","召唤","能量"],"starSlots":3,"cost":2,"roles":["front","back"]},{"id":"瓦尔特","name":"瓦尔特","bonds":["开拓银轨","群攻"],"starSlots":3,"cost":1,"roles":["front","back"]},{"id":"托帕\u0026账账","name":"托帕\u0026账账","bonds":["千星商会","追击"],"starSlots":3,"cost":1,"roles":["front","back"]},{"id":"景元","name":"景元","bonds":["云上五骁","召唤"],"starSlots":3,"cost":1,"roles":["front","back"]},{"id":"桂乃芬","name":"桂乃芬","bonds":["仙舟舰队","持续伤害"],"starSlots":3,"cost":1,"roles":["front","back"]},{"id":"灵砂","name":"灵砂","bonds":["仙舟舰队","群攻","治疗"],"starSlots":3,"cost":1,"roles":["front","back"]},{"id":"三月七","name":"三月七","bonds":["开拓银轨","追击"],"starSlots":3,"cost":1,"roles":["back"]},{"id":"忘归人","name":"忘归人","bonds":["星间旅人","击破"],"starSlots":3,"cost":1,"roles":["front","back"]},{"id":"黑天鹅","name":"黑天鹅","bonds":["梦境交织","持续伤害"],"starSlots":3,"cost":1,"roles":["back"]},{"id":"波提欧","name":"波提欧","bonds":["星间旅人","击破"],"starSlots":3,"cost":1,"roles":["front"]},{"id":"那刻夏","name":"那刻夏","bonds":["奇兽花园","连击"],"starSlots":3,"cost":1,"roles":["front"]},{"id":"刻律德菈","name":"刻律德菈","bonds":["小小巨人","连击"],"starSlots":3,"cost":1,"roles":["back"]},{"id":"长夜月","name":"长夜月","bonds":["奇兽花园","梦境交织","召唤"],"starSlots":3,"cost":1,"roles":["front","back"]},{"id":"火花","name":"火花","bonds":["幻月游戏","少女乐队","欢愉"],"starSlots":3,"cost":1,"roles":["front","back"]},{"id":"真珠","name":"真珠","bonds":["幻月游戏","千星商会","守护"],"starSlots":3,"cost":1,"roles":["back"]}],"stars":[{"bondId":"幻月游戏","name":"幻月游戏星徽"},{"bondId":"奇兽花园","name":"奇兽花园星徽"},{"bondId":"仙舟舰队","name":"仙舟舰队星徽"},{"bondId":"开拓银轨","name":"开拓银轨星徽"},{"bondId":"千星商会","name":"千星商会星徽"},{"bondId":"星核猎手","name":"星核猎手星徽"},{"bondId":"黄金大饭店","name":"黄金大饭店星徽"},{"bondId":"梦境交织","name":"梦境交织星徽"},{"bondId":"星间旅人","name":"星间旅人星徽"},{"bondId":"小小巨人","name":"小小巨人星徽"},{"bondId":"连击","name":"连击星徽"},{"bondId":"追击","name":"追击星徽"},{"bondId":"持续伤害","name":"持续伤害星徽"},{"bondId":"群攻","name":"群攻星徽"},{"bondId":"击破","name":"击破星徽"},{"bondId":"欢愉","name":"欢愉星徽"},{"bondId":"反击","name":"反击星徽"},{"bondId":"召唤","name":"召唤星徽"},{"bondId":"能量","name":"能量星徽"},{"bondId":"治疗","name":"治疗星徽"},{"bondId":"守护","name":"守护星徽"}]};
+
+const bondById = new Map(PLUGIN.bonds.map(b => [b.id, b]));
+const charById = new Map(PLUGIN.characters.map(c => [c.id, c]));
+const starByBond = new Map(PLUGIN.stars.map(s => [s.bondId, s]));
+const starBonds = PLUGIN.stars.map(s => s.bondId);
+const allChars = PLUGIN.characters;
+
+// 来自六张羁绊链路奖励截图，每个羁绊取最高档；千星商会按“3 四星”记为 3
+const REWARD_PRESETS = [
+  { bondId: '仙舟舰队', targetCount: 6 },
+  { bondId: '云上五骁', targetCount: 5 },
+  { bondId: '星间旅人', targetCount: 6 },
+  { bondId: '少女乐队', targetCount: 4 },
+  { bondId: '幻月游戏', targetCount: 7 },
+  { bondId: '奇兽花园', targetCount: 7 },
+  { bondId: '开拓银轨', targetCount: 6 },
+  { bondId: '千星商会', targetCount: 3 },
+  { bondId: '星核猎手', targetCount: 5 },
+  { bondId: '黄金大饭店', targetCount: 4 },
+  { bondId: '梦境交织', targetCount: 4 },
+  { bondId: '小小巨人', targetCount: 5 },
+  { bondId: '连击', targetCount: 6 },
+  { bondId: '追击', targetCount: 7 },
+  { bondId: '持续伤害', targetCount: 7 },
+  { bondId: '群攻', targetCount: 6 },
+  { bondId: '击破', targetCount: 6 },
+  { bondId: '能量', targetCount: 4 },
+  { bondId: '治疗', targetCount: 6 },
+  { bondId: '守护', targetCount: 3 },
+  { bondId: '欢愉', targetCount: 6 },
+  { bondId: '反击', targetCount: 4 },
+  { bondId: '召唤', targetCount: 4 },
+];
+const rewardPresetMap = new Map(REWARD_PRESETS.map(p => [p.bondId, p.targetCount]));
+
+const PRESET_GROUPS = [
+  {
+    id: 'bengtie-reward-1',
+    name: '崩铁奖励任务一组',
+    presets: REWARD_PRESETS,
+  },
+  {
+    id: 'bengtie-reward-2',
+    name: '崩铁奖励任务二组',
+    presets: [
+      { bondId: '仙舟舰队', targetCount: 6 },
+      { bondId: '云上五骁', targetCount: 5 },
+      { bondId: '星间旅人', targetCount: 6 },
+      { bondId: '少女乐队', targetCount: 4 },
+      { bondId: '千星商会', targetCount: 3 },
+      { bondId: '追击', targetCount: 7 },
+      { bondId: '持续伤害', targetCount: 7 },
+      { bondId: '群攻', targetCount: 6 },
+      { bondId: '击破', targetCount: 6 },
+    ],
+  },
+  {
+    id: 'bengtie-master',
+    name: '大师之路一组',
+    presets: [
+      { bondId: '仙舟舰队', targetCount: 9 },
+      { bondId: '奇兽花园', targetCount: 10 },
+      { bondId: '幻月游戏', targetCount: 10 },
+      { bondId: '开拓银轨', targetCount: 10 },
+      { bondId: '星核猎手', targetCount: 7 },
+      { bondId: '追击', targetCount: 10 },
+      { bondId: '持续伤害', targetCount: 9 },
+      { bondId: '群攻', targetCount: 8 },
+      { bondId: '连击', targetCount: 8 },
+      { bondId: '击破', targetCount: 8 },
+      { bondId: '召唤', targetCount: 8 },
+      { bondId: '能量', targetCount: 6 },
+    ],
+  },
+  {
+    id: 'bengtie-master-2',
+    name: '大师之路二组',
+    presets: [
+      { bondId: '奇兽花园', targetCount: 10 },
+      { bondId: '开拓银轨', targetCount: 10 },
+      { bondId: '追击', targetCount: 10 },
+      { bondId: '持续伤害', targetCount: 9 },
+      { bondId: '召唤', targetCount: 8 },
+    ],
+  },
+];
+const presetGroupById = new Map(PRESET_GROUPS.map(group => [group.id, group]));
+const allPresets = PRESET_GROUPS.flatMap(group => group.presets);
+
+function groupPresets(group) {
+  return group.presets.filter(preset => bondById.has(preset.bondId));
+}
+
+function presetTargetObjects() {
+  return allPresets
+    .filter(p => bondById.has(p.bondId))
+    .map(p => ({ bondId: p.bondId, targetCount: p.targetCount }));
+}
+
+const state = {
+  maxUnits: 13,
+  objective: 'targets',
+  mode: 'standard',
+  starView: 'icons',
+  resultTab: 'stars',
+  detail: false,
+  targets: [],
+  disabled: new Set(),
+  pinned: new Set(),
+  search: '',
+  result: null,
+};
+
+const $ = (sel, root = document) => root.querySelector(sel);
+
+function esc(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
+function charImg(name) {
+  return 'resources/characters/' + encodeURIComponent(name) + '.png';
+}
+
+function starImg(bondId) {
+  return 'resources/stars/icons/' + encodeURIComponent(bondId + '星徽') + '.png';
+}
+
+function starIcon(bondId, cls) {
+  if (!starByBond.has(bondId)) return '<span class="' + (cls || '') + ' no-star">无</span>';
+  return '<img class="' + (cls || '') + '" src="' + starImg(bondId) + '" alt="' + esc(bondId) + '星徽" loading="lazy">';
+}
+
+function levelOf(count, thresholds) {
+  let level = 0;
+  for (const t of thresholds) {
+    if (count >= t) level += 1;
+    else break;
+  }
+  return level;
+}
+
+function nextThreshold(count, thresholds) {
+  for (const t of thresholds) {
+    if (count < t) return t;
+  }
+  return null;
+}
+
+function computeNative(lineup) {
+  const counts = Object.create(null);
+  for (const id of lineup) {
+    const character = charById.get(id);
+    for (const bondId of character.bonds) {
+      counts[bondId] = (counts[bondId] || 0) + 1;
+    }
+  }
+  return counts;
+}
+
+// 前后台槽位约束占位：插件提供 characters[].roles 与 slotRules 后自动生效；当前 slotRules 为空，不做限制
+function checkSlotConstraint(lineup) {
+  const rules = PLUGIN.slotRules;
+  if (!Array.isArray(rules) || !rules.length) return true;
+
+  const roleCounts = Object.create(null);
+  for (const id of lineup) {
+    const character = charById.get(id);
+    const roles = character && Array.isArray(character.roles) ? character.roles : [];
+    for (const role of roles) {
+      roleCounts[role] = (roleCounts[role] || 0) + 1;
+    }
+  }
+
+  for (const rule of rules) {
+    if (!rule || !rule.role) continue;
+    const max = Number(rule.max);
+    if (Number.isFinite(max) && (roleCounts[rule.role] || 0) > max) return false;
+  }
+  return true;
+}
+
+function normalizeTargets(targets) {
+  const map = new Map();
+  for (const target of targets) {
+    const previous = map.get(target.bondId);
+    if (!previous || target.targetCount > previous.targetCount) {
+      map.set(target.bondId, { bondId: target.bondId, targetCount: target.targetCount });
+    }
+  }
+  return Array.from(map.values());
+}
+
+function targetSignature(targets) {
+  return targets.slice()
+    .sort((a, b) => a.bondId.localeCompare(b.bondId, 'zh'))
+    .map(t => t.bondId + ':' + t.targetCount)
+    .join('|');
+}
+
+function evaluateTargets(counts, targets) {
+  let achieved = 0;
+  let progress = 0;
+  const rows = targets.map(target => {
+    const bond = bondById.get(target.bondId);
+    const count = counts[target.bondId] || 0;
+    const ok = count >= target.targetCount;
+    const part = target.targetCount > 0 ? Math.min(count, target.targetCount) / target.targetCount : 0;
+    if (ok) achieved += 1;
+    progress += part;
+    return {
+      bondId: target.bondId,
+      bondName: bond ? bond.name : target.bondId,
+      targetCount: target.targetCount,
+      count,
+      achieved: ok,
+      progress: part,
+    };
+  });
+  return { achieved, progress, rows };
+}
+
+function betterCandidate(a, b) {
+  if (!b) return true;
+  if (a.ratio !== b.ratio) return a.ratio > b.ratio;
+  if (a.need !== b.need) return a.need < b.need;
+  if (a.count !== b.count) return a.count > b.count;
+  if (a.targetGain !== b.targetGain) return a.targetGain > b.targetGain;
+  if (a.gainWeight !== b.gainWeight) return a.gainWeight > b.gainWeight;
+  return a.bondId.localeCompare(b.bondId, 'zh') < 0;
+}
+
+function allocateStars(lineup, nativeCounts, objective, targets, targetMode, strictTargetMode) {
+  const counts = { ...nativeCounts };
+  const slotsLeft = {};
+  const granted = {};
+  const nativeSet = {};
+  const activeTargets = targetMode ? targets : [];
+  const targetMap = new Map(activeTargets.map(t => [t.bondId, t]));
+  const strict = targetMode && strictTargetMode;
+
+  for (const id of lineup) {
+    const character = charById.get(id);
+    slotsLeft[id] = character.starSlots == null ? 3 : character.starSlots;
+    granted[id] = new Set();
+    nativeSet[id] = new Set(character.bonds);
+  }
+
+  const allocations = [];
+  const groups = [];
+
+  while (true) {
+    let best = null;
+
+    for (const bondId of starBonds) {
+      const bond = bondById.get(bondId);
+      const count = counts[bondId] || 0;
+      const levelBefore = levelOf(count, bond.thresholds);
+      const targetSpec = targetMap.get(bondId) || null;
+      const targetNeeded = !!(targetSpec && count < targetSpec.targetCount);
+
+      if (strict && !targetNeeded) continue;
+      if (!targetNeeded && objective === 'maxKinds' && levelBefore >= 1) continue;
+
+      const stepTo = targetNeeded
+        ? targetSpec.targetCount
+        : nextThreshold(count, bond.thresholds);
+      if (stepTo == null) continue;
+
+      const need = stepTo - count;
+      const hosts = [];
+      for (const id of lineup) {
+        if (slotsLeft[id] <= 0) continue;
+        if (nativeSet[id].has(bondId)) continue;
+        if (granted[id].has(bondId)) continue;
+        hosts.push(id);
+      }
+      if (!hosts.length) continue;
+      // 目标条件允许分批补星徽：即使当前可装角色不足，也先补能补的部分
+      if (!targetNeeded && hosts.length < need) continue;
+      const allocCount = targetNeeded ? Math.min(need, hosts.length) : need;
+
+      const levelAfter = levelOf(targetNeeded ? count + allocCount : stepTo, bond.thresholds);
+      const targetGain = targetNeeded ? 1 : 0;
+      const secondaryGain = strict ? 0 : (objective === 'maxKinds'
+        ? (levelBefore < 1 && levelAfter >= 1 ? 1 : 0)
+        : (levelAfter - levelBefore));
+      const gainWeight = targetGain * 1000 + secondaryGain;
+      if (gainWeight <= 0) continue;
+
+      const candidate = {
+        bondId, bond, count, target: stepTo, need: allocCount, hosts,
+        targetGain, secondaryGain, gainWeight,
+        partial: allocCount < need,
+        ratio: gainWeight / allocCount,
+      };
+      if (betterCandidate(candidate, best)) best = candidate;
+    }
+
+    if (!best) break;
+
+    best.hosts.sort((a, b) => {
+      const slotDiff = slotsLeft[b] - slotsLeft[a];
+      if (slotDiff !== 0) return slotDiff;
+      return a.localeCompare(b, 'zh');
+    });
+    const chosen = best.hosts.slice(0, best.need);
+
+    for (const id of chosen) {
+      counts[best.bondId] = (counts[best.bondId] || 0) + 1;
+      slotsLeft[id] -= 1;
+      granted[id].add(best.bondId);
+      allocations.push({
+        bondId: best.bondId,
+        charId: id,
+        from: counts[best.bondId] - 1,
+        to: counts[best.bondId],
+      });
+    }
+
+    groups.push({
+      bondId: best.bondId,
+      from: best.count,
+      to: best.count + best.need,
+      target: best.target,
+      need: best.need,
+      partial: best.partial,
+      gain: best.gainWeight,
+      reason: best.targetGain > 0 ? 'target' : 'secondary',
+      hosts: chosen.slice(),
+    });
+  }
+
+  const levels = {};
+  let totalLevels = 0;
+  let kinds = 0;
+  let sumCounts = 0;
+
+  for (const [bondId, count] of Object.entries(counts)) {
+    const bond = bondById.get(bondId);
+    if (!bond) continue;
+    const level = levelOf(count, bond.thresholds);
+    levels[bondId] = level;
+    totalLevels += level;
+    if (level > 0) kinds += 1;
+    sumCounts += count;
+  }
+
+  const targetEvaluation = evaluateTargets(counts, activeTargets);
+  const score = objective === 'maxKinds' ? kinds : totalLevels;
+  const slotsTotal = lineup.reduce((sum, id) => sum + (charById.get(id).starSlots == null ? 3 : charById.get(id).starSlots), 0);
+
+  return {
+    counts, levels, totalLevels, kinds, sumCounts, score,
+    allocations, groups,
+    targetsAchieved: targetEvaluation.achieved,
+    targetProgress: targetEvaluation.progress,
+    targetRows: targetEvaluation.rows,
+    slotsUsed: allocations.length,
+    slotsTotal,
+  };
+}
+
+function evaluateLineup(lineup, objective, targets, targetMode, strictTargetMode) {
+  return allocateStars(lineup, computeNative(lineup), objective, targets, targetMode, strictTargetMode);
+}
+
+function betterResult(a, b, targetMode, strictTargetMode) {
+  if (!b) return true;
+  if (targetMode) {
+    if (a.targetsAchieved !== b.targetsAchieved) return a.targetsAchieved > b.targetsAchieved;
+    if (a.targetProgress !== b.targetProgress) return a.targetProgress > b.targetProgress;
+    if (strictTargetMode) {
+      if (a.slotsUsed !== b.slotsUsed) return a.slotsUsed < b.slotsUsed;
+      return false;
+    }
+  }
+  if (a.score !== b.score) return a.score > b.score;
+  if (a.totalLevels !== b.totalLevels) return a.totalLevels > b.totalLevels;
+  if (a.kinds !== b.kinds) return a.kinds > b.kinds;
+  if (a.sumCounts !== b.sumCounts) return a.sumCounts > b.sumCounts;
+  if (a.slotsUsed !== b.slotsUsed) return a.slotsUsed < b.slotsUsed;
+  return false;
+}
+
+function solveGreedy(available, pinned, maxUnits, objective, evalFn, targetMode, strictTargetMode) {
+  const selected = pinned.slice();
+  const selectedSet = new Set(selected);
+
+  if (selected.length > maxUnits) {
+    throw new Error('必选角色数量超过上阵人数上限');
+  }
+
+  let current = evalFn(selected);
+
+  while (selected.length < maxUnits) {
+    let bestId = null;
+    let bestEval = null;
+
+    for (const id of available) {
+      if (selectedSet.has(id)) continue;
+      const trial = selected.concat(id);
+      if (!checkSlotConstraint(trial)) continue;
+      const evaluation = evalFn(trial);
+      if (betterResult(evaluation, bestEval, targetMode, strictTargetMode)) {
+        bestId = id;
+        bestEval = evaluation;
+      }
+    }
+
+    if (!bestId) break;
+    if (strictTargetMode && selected.length > 0 && !betterResult(bestEval, current, targetMode, strictTargetMode)) break;
+    selected.push(bestId);
+    selectedSet.add(bestId);
+    current = bestEval;
+  }
+
+  return { selected, eval: current };
+}
+
+function solveLocal(initial, available, pinnedSet, maxUnits, objective, passes, evalFn, targetMode, strictTargetMode) {
+  let selected = initial.slice();
+  let current = evalFn(selected);
+  const selectedSet = new Set(selected);
+
+  for (let pass = 0; pass < passes; pass += 1) {
+    let bestSwap = null;
+
+    for (let i = 0; i < selected.length; i += 1) {
+      const outId = selected[i];
+      if (pinnedSet.has(outId)) continue;
+
+      for (const inId of available) {
+        if (selectedSet.has(inId)) continue;
+        const trial = selected.slice();
+        trial[i] = inId;
+        if (!checkSlotConstraint(trial)) continue;
+        const evaluation = evalFn(trial);
+        if (betterResult(evaluation, current, targetMode, strictTargetMode)) {
+          if (!bestSwap || betterResult(evaluation, bestSwap.eval, targetMode, strictTargetMode)) {
+            bestSwap = { index: i, outId, inId, trial, eval: evaluation };
+          }
+        }
+      }
+    }
+
+    if (!bestSwap) break;
+
+    selected = bestSwap.trial;
+    current = bestSwap.eval;
+    selectedSet.delete(bestSwap.outId);
+    selectedSet.add(bestSwap.inId);
+  }
+
+  return { selected, eval: current };
+}
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function randomLineup(available, pinned, maxUnits) {
+  const pinnedSet = new Set(pinned);
+  const pool = available.filter(id => !pinnedSet.has(id));
+  shuffle(pool);
+  const lineup = pinned.concat(pool.slice(0, Math.max(0, maxUnits - pinned.length)));
+  while (lineup.length > pinned.length && !checkSlotConstraint(lineup)) lineup.pop();
+  return lineup;
+}
+
+function solveWithMode(available, pinned, maxUnits, objective, mode, targets, targetMode, strictTargetMode) {
+  const normalizedTargets = targetMode ? normalizeTargets(targets) : [];
+  const strict = targetMode && strictTargetMode;
+  const cache = new Map();
+  const evalFn = (lineup) => {
+    const key = objective + '|' + targetMode + '|' + strict + '|' + targetSignature(normalizedTargets) + '|' + lineup.slice().sort().join('|');
+    if (cache.has(key)) return cache.get(key);
+    const evaluation = evaluateLineup(lineup, objective, normalizedTargets, targetMode, strict);
+    cache.set(key, evaluation);
+    return evaluation;
+  };
+
+  const greedy = solveGreedy(available, pinned, maxUnits, objective, evalFn, targetMode, strict);
+  let best = greedy;
+
+  if (mode !== 'fast') {
+    const passes = mode === 'deep' ? 4 : 2;
+    const pinnedSet = new Set(pinned);
+
+    const local = solveLocal(greedy.selected, available, pinnedSet, maxUnits, objective, passes, evalFn, targetMode, strict);
+    if (betterResult(local.eval, best.eval, targetMode, strict)) best = local;
+
+    if (mode === 'deep' && !strict) {
+      for (let round = 0; round < 3; round += 1) {
+        const start = randomLineup(available, pinned, maxUnits);
+        const restarted = solveLocal(start, available, pinnedSet, maxUnits, objective, passes, evalFn, targetMode, strict);
+        if (betterResult(restarted.eval, best.eval, targetMode, strict)) best = restarted;
+      }
+    }
+  }
+
+  return {
+    selected: best.selected,
+    eval: best.eval,
+    objective,
+    mode,
+    maxUnits,
+    pinned: pinned.slice(),
+    targets: normalizedTargets,
+    targetMode,
+    strictTargetMode: strict,
+    availableCount: available.length,
+  };
+}
+
+function renderPool() {
+  const query = state.search.trim().toLowerCase();
+  const list = allChars.filter(c => {
+    if (!query) return true;
+    return c.name.toLowerCase().includes(query) || c.bonds.some(b => b.toLowerCase().includes(query));
+  });
+
+  $('#poolCount').textContent = list.length + ' / ' + allChars.length;
+
+  const pinSvg = '<svg viewBox="0 0 24 24" fill="none"><path d="M9 3h6l-1 6 4 4v2H6v-2l4-4-1-6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 15v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
+  const html = list.map(c => {
+    const disabled = state.disabled.has(c.id);
+    const pinned = state.pinned.has(c.id);
+    const classes = ['char-card'];
+    if (disabled) classes.push('disabled');
+    if (pinned) classes.push('pinned');
+    return '<div class="' + classes.join(' ') + '" data-id="' + esc(c.id) + '" title="' + esc(c.bonds.join(' / ')) + '">' +
+      '<img src="' + charImg(c.name) + '" alt="' + esc(c.name) + '" loading="lazy" decoding="async">' +
+      '<span class="cost-badge">' + c.cost + '费</span>' +
+      '<button class="pin-btn" data-pin="' + esc(c.id) + '" title="' + (pinned ? '取消必选' : '设为必选') + '">' + pinSvg + '</button>' +
+      '<div class="char-meta">' +
+        '<div class="char-name">' + esc(c.name) + '</div>' +
+        '<div class="char-bonds">' + esc(c.bonds.join(' · ')) + '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  const grid = $('#poolGrid');
+  const scrollTop = grid.scrollTop;
+  grid.innerHTML = html;
+  grid.scrollTop = scrollTop;
+}
+
+function setStatus(message) {
+  $('#status').textContent = message || '';
+}
+
+function toggleEnabled(id) {
+  if (state.pinned.has(id)) return;
+  if (state.disabled.has(id)) state.disabled.delete(id);
+  else state.disabled.add(id);
+  renderPool();
+}
+
+function togglePinned(id) {
+  if (state.pinned.has(id)) {
+    state.pinned.delete(id);
+  } else {
+    state.pinned.add(id);
+    state.disabled.delete(id);
+  }
+  renderPool();
+}
+
+function reset() {
+  state.disabled.clear();
+  state.pinned.clear();
+  state.maxUnits = 13;
+  state.objective = 'targets';
+  state.mode = 'standard';
+  state.starView = 'icons';
+  state.resultTab = 'stars';
+  state.detail = false;
+  state.targets = [];
+  state.search = '';
+  state.result = null;
+
+  $('#maxUnits').value = '13';
+  $('#search').value = '';
+  $('#mode').value = 'standard';
+  const radios = document.querySelectorAll('input[name="objective"]');
+  radios.forEach(r => { r.checked = r.value === 'targets'; });
+
+  setStarView();
+  setDetailToggle();
+  renderTargetEditor();
+  setStatus('');
+  renderPool();
+  $('#result').classList.add('hidden');
+  $('#emptyState').classList.remove('hidden');
+}
+
+function solve() {
+  const maxUnits = Math.max(1, Math.min(13, Number(state.maxUnits) || 13));
+  state.maxUnits = maxUnits;
+  $('#maxUnits').value = String(maxUnits);
+
+  const available = allChars.filter(c => !state.disabled.has(c.id)).map(c => c.id);
+  const pinned = Array.from(state.pinned).filter(id => !state.disabled.has(id));
+
+  if (pinned.length > maxUnits) {
+    setStatus('必选角色数量超过上阵人数上限');
+    return;
+  }
+  if (available.length === 0) {
+    setStatus('请至少启用一个角色');
+    return;
+  }
+  if (state.objective === 'targets' && state.targets.length === 0) {
+    setStatus('请先勾选奖励条件或添加自定义条件');
+    return;
+  }
+
+  const targetMode = state.objective === 'targets';
+  const strictTargetMode = targetMode;
+  const targets = targetMode ? normalizeTargets(state.targets) : [];
+  setStatus('');
+
+  window.setTimeout(() => {
+    try {
+      const result = solveWithMode(available, pinned, maxUnits, state.objective, state.mode, targets, targetMode, strictTargetMode);
+      state.result = result;
+      renderResult();
+      $('#emptyState').classList.add('hidden');
+      $('#result').classList.remove('hidden');
+      syncResultHeight();
+    } catch (error) {
+      console.error(error);
+      setStatus('求解失败：' + error.message);
+    }
+  }, 30);
+}
+
+function renderResult() {
+  const result = state.result;
+  if (!result) return;
+
+  const evaluation = result.eval;
+  const objectiveLabels = { maxLevels: '羁绊总等级', maxKinds: '激活羁绊数', targets: '只满足指定条件' };
+  const objectiveLabel = objectiveLabels[result.objective] || result.objective;
+  const targetText = result.targetMode && result.targets.length
+    ? ' · 指定条件 ' + evaluation.targetsAchieved + ' / ' + result.targets.length
+    : '';
+  const conditionValue = result.targetMode && result.targets.length
+    ? evaluation.targetsAchieved + '<span>/' + result.targets.length + '</span>'
+    : '—';
+
+  $('#summary').innerHTML =
+    '<div class="summary-grid">' +
+      '<div class="stat"><div class="stat-value">' + result.selected.length + '<span>/' + result.maxUnits + '</span></div><div class="stat-label">上阵人数</div></div>' +
+      '<div class="stat"><div class="stat-value">' + evaluation.kinds + '</div><div class="stat-label">激活羁绊</div></div>' +
+      '<div class="stat"><div class="stat-value">' + conditionValue + '</div><div class="stat-label">条件达成</div></div>' +
+      '<div class="stat"><div class="stat-value">' + evaluation.slotsUsed + '</div><div class="stat-label">所需星徽</div></div>' +
+    '</div>' +
+    '<div class="summary-sub">目标：' + objectiveLabel + targetText + ' · 星徽槽位使用 ' + evaluation.slotsUsed + ' / ' + evaluation.slotsTotal + ' · 可用角色 ' + result.availableCount + ' 个</div>';
+
+  renderTargets(result);
+  renderLineup(result);
+  renderBonds(result);
+  renderStars(result);
+  applyResultTab();
+  syncResultHeight();
+}
+
+function applyResultTab() {
+  const panels = {
+    bonds: $('#bondsPanel'),
+    targets: $('#targetCard'),
+    stars: $('#starsPanel'),
+  };
+  const targetTab = document.querySelector('[data-result-tab="targets"]');
+  if (state.resultTab === 'targets' && targetTab && targetTab.classList.contains('hidden')) {
+    state.resultTab = 'stars';
+  }
+  for (const [key, panel] of Object.entries(panels)) {
+    if (panel) panel.classList.toggle('hidden', key !== state.resultTab);
+  }
+  document.querySelectorAll('[data-result-tab]').forEach(button => {
+    button.classList.toggle('active', button.getAttribute('data-result-tab') === state.resultTab);
+  });
+}
+
+function renderTargets(result) {
+  const tabButton = document.querySelector('[data-result-tab="targets"]');
+  const available = !!(result.targetMode && result.targets.length);
+  if (tabButton) tabButton.classList.toggle('hidden', !available);
+  if (!available) {
+    $('#targetResults').innerHTML = '';
+    return;
+  }
+
+  const rows = result.eval.targetRows || [];
+  const achieved = result.eval.targetsAchieved || 0;
+  $('#targetMeta').textContent = achieved + ' / ' + result.targets.length + ' 已达成';
+
+  $('#targetResults').innerHTML = rows.map(row => {
+    const bond = bondById.get(row.bondId);
+    const thresholds = bond ? bond.thresholds : [row.targetCount];
+    const maxThreshold = thresholds[thresholds.length - 1];
+    const percent = Math.min(100, (row.count / Math.max(1, maxThreshold)) * 100);
+    const targetPercent = Math.min(100, (row.targetCount / Math.max(1, maxThreshold)) * 100);
+    const currentLevel = bond ? levelOf(row.count, bond.thresholds) : 0;
+    const targetLevel = levelOf(row.targetCount, thresholds);
+
+    return '<div class="target-result">' +
+      '<div class="target-result-title">' + esc(row.bondName) +
+        '<span class="target-badge ' + (row.achieved ? 'ok' : 'miss') + '">' + (row.achieved ? '已达成' : '未达成') + '</span>' +
+      '</div>' +
+      '<div class="target-result-sub">目标 ≥ ' + row.targetCount + '（Lv.' + targetLevel + '） · 当前 ' + row.count + '（Lv.' + currentLevel + '）</div>' +
+      '<div class="progress" style="margin-top:6px">' +
+        '<div class="progress-fill" style="width:' + percent + '%"></div>' +
+        '<span class="progress-tick" style="left:' + targetPercent + '%"></span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  if (achieved < result.targets.length) {
+    $('#targetResults').innerHTML += '<div class="target-hint" style="margin-top:8px">未达成的条件已尽量接近；可以尝试增加上阵人数、取消排除角色，或调整必选角色。</div>';
+  }
+}
+
+const FRONT_SLOTS = 4;
+
+function splitPositions(lineup) {
+  const frontOnly = [];
+  const flexible = [];
+  const backOnly = [];
+  for (const id of lineup) {
+    const roles = charById.get(id).roles || [];
+    const isFront = roles.includes('front');
+    const isBack = roles.includes('back');
+    if (isFront && isBack) flexible.push(id);
+    else if (isFront) frontOnly.push(id);
+    else backOnly.push(id);
+  }
+
+  const front = frontOnly.slice(0, FRONT_SLOTS);
+  if (front.length < FRONT_SLOTS && flexible.length) {
+    front.push(...flexible.slice(0, FRONT_SLOTS - front.length));
+  }
+  const frontSet = new Set(front);
+  return { front, back: lineup.filter(id => !frontSet.has(id)) };
+}
+
+function unitStarsHtml(assigned) {
+  const stars = [];
+  for (let i = 0; i < 3; i += 1) {
+    const alloc = assigned[i];
+    stars.push(alloc
+      ? '<img class="unit-star" src="' + starImg(alloc.bondId) + '" alt="' + esc(alloc.bondId) + '星徽" title="' + esc(alloc.bondId) + '星徽">'
+      : '<span class="unit-star empty"></span>');
+  }
+  return stars.join('');
+}
+
+function unitCard(id, assigned) {
+  const character = charById.get(id);
+  const starNames = assigned.map(a => a.bondId).join('、');
+  return '<div class="unit-card">' +
+    '<img class="unit-img" src="' + charImg(character.name) + '" alt="' + esc(character.name) + '" loading="lazy">' +
+    '<div class="unit-stars">' + unitStarsHtml(assigned) + '</div>' +
+    '<div class="unit-detail">' +
+      '<div class="unit-detail-name"><span>' + esc(character.name) + '</span><span class="cost">' + character.cost + '费</span></div>' +
+      '<div class="unit-detail-bonds">' + character.bonds.map(b => '<span class="chip">' + esc(b) + '</span>').join('') + '</div>' +
+      '<div class="unit-detail-slots" title="' + esc(starNames) + '">' + (starNames ? '星徽：' + esc(starNames) : '未装备星徽') + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function emptyUnitCard() {
+  return '<div class="unit-card empty">' +
+    '<div class="unit-img empty"><span>空位</span></div>' +
+    '<div class="unit-stars"><span class="unit-star empty"></span><span class="unit-star empty"></span><span class="unit-star empty"></span></div>' +
+    '<div class="unit-detail"></div>' +
+  '</div>';
+}
+
+function renderLineup(result) {
+  const evaluation = result.eval;
+  const { front, back } = splitPositions(result.selected);
+  $('#lineupMeta').textContent = result.selected.length + ' 人 · 前台 ' + front.length + ' · 后台 ' + back.length;
+
+  const board = $('#lineup');
+  board.classList.toggle('show-detail', state.detail);
+
+  const assignedByChar = new Map();
+  for (const alloc of evaluation.allocations) {
+    if (!assignedByChar.has(alloc.charId)) assignedByChar.set(alloc.charId, []);
+    assignedByChar.get(alloc.charId).push(alloc);
+  }
+
+  const frontCards = front.map(id => unitCard(id, assignedByChar.get(id) || []));
+  while (frontCards.length < FRONT_SLOTS) frontCards.push(emptyUnitCard());
+
+  let html = '<div class="board-row">' +
+    '<div class="row-label"><span>前台</span><span class="row-count">' + front.length + ' / ' + FRONT_SLOTS + '</span></div>' +
+    '<div class="row-cards">' + frontCards.join('') + '</div>' +
+  '</div>';
+
+  if (back.length) {
+    html += '<div class="board-row">' +
+      '<div class="row-label"><span>后台</span><span class="row-count">' + back.length + '</span></div>' +
+      '<div class="row-cards">' + back.map(id => unitCard(id, assignedByChar.get(id) || [])).join('') + '</div>' +
+    '</div>';
+  }
+
+  board.innerHTML = html;
+}
+
+function renderBonds(result) {
+  const evaluation = result.eval;
+  const rows = PLUGIN.bonds.map(bond => {
+    const count = evaluation.counts[bond.id] || 0;
+    const level = evaluation.levels[bond.id] || 0;
+    return { bond, count, level };
+  }).filter(row => row.count > 0).sort((a, b) => {
+    if (b.level !== a.level) return b.level - a.level;
+    if (b.count !== a.count) return b.count - a.count;
+    return a.bond.name.localeCompare(b.bond.name, 'zh');
+  });
+
+  $('#bondsCount').textContent = rows.length + ' 个有计数 · ' + evaluation.kinds + ' 个已激活';
+
+  if (!rows.length) {
+    $('#bonds').innerHTML = '<div class="muted">当前阵容没有激活任何羁绊。</div>';
+    return;
+  }
+
+  $('#bonds').innerHTML = rows.map(({ bond, count, level }) => {
+    const maxThreshold = bond.thresholds[bond.thresholds.length - 1];
+    const percent = Math.min(100, (count / maxThreshold) * 100);
+    const ticks = bond.thresholds.map(t => '<span class="progress-tick" style="left:' + Math.min(100, (t / maxThreshold) * 100) + '%"></span>').join('');
+    const next = bond.thresholds.find(t => count < t);
+    const thresholds = bond.thresholds.map(t => {
+      let cls = '';
+      if (count >= t) cls = 'done';
+      else if (t === next) cls = 'next';
+      return '<span class="' + cls + '">' + t + '</span>';
+    }).join(' / ');
+
+    const native = result.selected.filter(id => charById.get(id).bonds.includes(bond.id));
+    const granted = evaluation.allocations.filter(a => a.bondId === bond.id);
+
+    const nativeHtml = native.map(id => '<span class="contrib-chip"><img class="avatar" src="' + charImg(id) + '" alt="">' + esc(id) + '</span>').join('');
+    const grantedHtml = granted.map(a => '<span class="contrib-chip granted">' + starIcon(bond.id, 'mini-star') + esc(a.charId) + '</span>').join('');
+
+    return '<div class="bond-row">' +
+      '<div>' + (starByBond.has(bond.id)
+        ? '<img class="bond-icon" src="' + starImg(bond.id) + '" alt="" loading="lazy">'
+        : '<span class="bond-icon no-star">' + esc(bond.name.slice(0, 1)) + '</span>') + '</div>' +
+      '<div class="bond-main">' +
+        '<div class="bond-title"><span class="bond-name">' + esc(bond.name) + '</span><span class="bond-level">Lv.' + level + '</span></div>' +
+        '<div class="progress"><div class="progress-fill" style="width:' + percent + '%"></div>' + ticks + '</div>' +
+        '<div class="bond-thresholds">' + thresholds + '<span class="bond-count">当前 ' + count + '</span></div>' +
+        '<div class="contributors">' + nativeHtml + grantedHtml + '</div>' +
+      '</div>' +
+      '<div class="bond-total">' + count + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function starHostChip(id) {
+  return '<span class="star-host"><img class="avatar" src="' + charImg(id) + '" alt="">' + esc(id) + '</span>';
+}
+
+function renderStars(result) {
+  const evaluation = result.eval;
+  const groups = evaluation.groups;
+  const allocations = evaluation.allocations;
+
+  $('#starsCount').textContent = allocations.length ? '共 ' + allocations.length + ' 个' : '无需星徽';
+
+  if (!allocations.length) {
+    $('#stars').innerHTML = '<div class="muted">当前阵容在该目标下不需要额外星徽。</div>';
+    return;
+  }
+
+  if (state.starView === 'summary') {
+    $('#stars').innerHTML = renderStarSummary(evaluation);
+    return;
+  }
+
+  if (state.starView === 'icons') {
+    $('#stars').innerHTML = renderStarIcons(evaluation);
+    return;
+  }
+
+  $('#stars').innerHTML = groups.map((group, index) => {
+    const bond = bondById.get(group.bondId);
+    const sub = group.reason === 'target'
+      ? (group.partial
+        ? '第 ' + (index + 1) + ' 步 · 向目标 ' + group.target + ' 点推进，' + group.from + ' → ' + group.to + '（Lv.' + levelOf(group.to, bond.thresholds) + '）'
+        : '第 ' + (index + 1) + ' 步 · 达到目标 ' + group.to + ' 点（Lv.' + levelOf(group.to, bond.thresholds) + '），' + group.from + ' → ' + group.to)
+      : '第 ' + (index + 1) + ' 步 · ' + group.from + ' → ' + group.to + '，达到 Lv.' + levelOf(group.to, bond.thresholds);
+
+    return '<div class="star-group">' +
+      '<div class="star-group-head">' +
+        '<img class="star-icon" src="' + starImg(group.bondId) + '" alt="" loading="lazy">' +
+        '<div>' +
+          '<div class="star-group-title">' + esc(bond.name) + '星徽 <span class="star-count">×' + group.need + '</span>' +
+            (group.reason === 'target' ? '<span class="target-mark">目标</span>' : '') +
+          '</div>' +
+          '<div class="star-group-sub">' + sub + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="star-host-list">' + group.hosts.map(starHostChip).join('') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderStarIcons(evaluation) {
+  const order = [];
+  const counts = new Map();
+  for (const alloc of evaluation.allocations) {
+    if (!counts.has(alloc.bondId)) {
+      counts.set(alloc.bondId, 0);
+      order.push(alloc.bondId);
+    }
+    counts.set(alloc.bondId, counts.get(alloc.bondId) + 1);
+  }
+  return '<div class="star-compact">' + order.map(bondId => {
+    const count = counts.get(bondId);
+    return '<span class="star-compact-item">' +
+      '<img src="' + starImg(bondId) + '" alt="" loading="lazy">' +
+      '<span class="star-compact-count">×' + count + '</span>' +
+    '</span>';
+  }).join('') + '</div>';
+}
+
+function renderStarSummary(evaluation) {
+  const targetBonds = new Set(evaluation.groups.filter(g => g.reason === 'target').map(g => g.bondId));
+  const order = [];
+  const byBond = new Map();
+
+  for (const alloc of evaluation.allocations) {
+    let entry = byBond.get(alloc.bondId);
+    if (!entry) {
+      entry = { bondId: alloc.bondId, total: 0, from: alloc.from, to: alloc.to, hosts: [] };
+      byBond.set(alloc.bondId, entry);
+      order.push(entry);
+    }
+    entry.total += 1;
+    entry.to = alloc.to;
+    if (!entry.hosts.includes(alloc.charId)) entry.hosts.push(alloc.charId);
+  }
+
+  return order.map(entry => {
+    const bond = bondById.get(entry.bondId);
+    return '<div class="star-group">' +
+      '<div class="star-group-head">' +
+        '<img class="star-icon" src="' + starImg(entry.bondId) + '" alt="" loading="lazy">' +
+        '<div>' +
+          '<div class="star-group-title">' + esc(bond.name) + '星徽 <span class="star-count">×' + entry.total + '</span>' +
+            (targetBonds.has(entry.bondId) ? '<span class="target-mark">目标</span>' : '') +
+          '</div>' +
+          '<div class="star-group-sub">汇总 · ' + entry.from + ' → ' + entry.to + '，达到 Lv.' + levelOf(entry.to, bond.thresholds) + ' · 共 ' + entry.hosts.length + ' 名角色穿戴</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="star-host-list">' + entry.hosts.map(starHostChip).join('') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function fillTargetBondOptions() {
+  const select = $('#targetBond');
+  if (!select || select.options.length) return;
+  select.innerHTML = PLUGIN.bonds.map(bond =>
+    '<option value="' + esc(bond.id) + '">' + esc(bond.name) + '（' + bond.thresholds.join('/') + '）</option>'
+  ).join('');
+  syncTargetLevelDefault();
+}
+
+function syncTargetLevelDefault() {
+  const bondId = $('#targetBond').value;
+  const bond = bondById.get(bondId);
+  if (!bond) return;
+  const preset = rewardPresetMap.get(bondId);
+  $('#targetLevel').value = preset == null ? bond.thresholds[0] : preset;
+}
+
+function applyRewardPresets() {
+  state.targets = normalizeTargets(state.targets.concat(presetTargetObjects()));
+  renderTargetEditor();
+}
+
+function renderPresetList() {
+  const list = $('#presetList');
+  if (!list) return;
+  list.innerHTML = PRESET_GROUPS.map(group => {
+    const items = groupPresets(group).map(preset => {
+      const bond = bondById.get(preset.bondId);
+      return '<label class="preset-item" title="勾选加入条件：' + esc(bond.name) + ' ≥ ' + preset.targetCount + '">' +
+        '<input type="checkbox" data-preset="' + esc(preset.bondId) + '">' +
+        '<span>' + esc(bond.name) + '</span>' +
+        '<span class="preset-target">≥ ' + preset.targetCount + '</span>' +
+      '</label>';
+    }).join('');
+    return '<div class="preset-group" data-group="' + esc(group.id) + '">' +
+      '<label class="preset-group-head">' +
+        '<input type="checkbox" data-preset-group="' + esc(group.id) + '">' +
+        '<span>' + esc(group.name) + '</span>' +
+        '<span class="group-count"></span>' +
+      '</label>' +
+      '<div class="preset-grid">' + items + '</div>' +
+    '</div>';
+  }).join('');
+  syncPresetChecks();
+}
+
+function syncPresetChecks() {
+  const active = new Set(state.targets.map(t => t.bondId));
+
+  document.querySelectorAll('[data-preset]').forEach(checkbox => {
+    checkbox.checked = active.has(checkbox.getAttribute('data-preset'));
+  });
+
+  document.querySelectorAll('[data-preset-group]').forEach(groupCheckbox => {
+    const group = presetGroupById.get(groupCheckbox.getAttribute('data-preset-group'));
+    if (!group) return;
+    const presets = groupPresets(group);
+    const onCount = presets.filter(preset => active.has(preset.bondId)).length;
+    groupCheckbox.checked = presets.length > 0 && onCount === presets.length;
+    groupCheckbox.indeterminate = onCount > 0 && onCount < presets.length;
+    const countEl = groupCheckbox.closest('.preset-group').querySelector('.group-count');
+    if (countEl) countEl.textContent = '已选 ' + onCount + ' / ' + presets.length;
+  });
+
+  const note = $('#presetNote');
+  if (note) note.textContent = '已选 ' + active.size + ' 条条件';
+}
+
+function renderTargetEditor() {
+  const editor = $('#targetEditor');
+  if (!editor) return;
+  editor.classList.toggle('hidden', state.objective !== 'targets');
+  const empty = $('#targetEmpty');
+  if (empty) empty.classList.toggle('hidden', state.objective === 'targets');
+  const selectedField = $('#selectedField');
+  if (selectedField) selectedField.classList.toggle('hidden', state.objective !== 'targets');
+  syncPresetChecks();
+  const list = $('#targetList');
+  if (!list) return;
+  if (!state.targets.length) {
+    list.innerHTML = '<span class="target-hint" style="margin:0">尚未选择条件。勾选上方奖励条件，或在下方添加自定义条件。</span>';
+    return;
+  }
+  list.innerHTML = state.targets.map(target => {
+    const bond = bondById.get(target.bondId);
+    const thresholds = bond ? bond.thresholds : [target.targetCount];
+    return '<span class="target-chip">' + esc(bond ? bond.name : target.bondId) + ' ≥ ' + target.targetCount +
+      '（Lv.' + levelOf(target.targetCount, thresholds) + '）' +
+      '<button data-remove-target="' + esc(target.bondId) + '" title="移除">×</button></span>';
+  }).join('');
+}
+
+function addTarget() {
+  const bondId = $('#targetBond').value;
+  const raw = Number($('#targetLevel').value);
+  if (!bondId || !Number.isFinite(raw) || raw < 1) return;
+  const targetCount = Math.floor(raw);
+  state.targets = normalizeTargets(state.targets.concat({ bondId, targetCount }));
+  renderTargetEditor();
+}
+
+function bindEvents() {
+  $('#poolGrid').addEventListener('click', event => {
+    const pinButton = event.target.closest('[data-pin]');
+    if (pinButton) {
+      event.stopPropagation();
+      togglePinned(pinButton.getAttribute('data-pin'));
+      return;
+    }
+    const card = event.target.closest('.char-card');
+    if (card) toggleEnabled(card.getAttribute('data-id'));
+  });
+
+  $('#search').addEventListener('input', event => {
+    state.search = event.target.value;
+    renderPool();
+  });
+
+  $('#maxUnits').addEventListener('input', event => {
+    state.maxUnits = Math.max(1, Math.min(13, Number(event.target.value) || 1));
+  });
+
+  document.querySelectorAll('input[name="objective"]').forEach(radio => {
+    radio.addEventListener('change', event => {
+      if (!event.target.checked) return;
+      state.objective = event.target.value;
+      renderTargetEditor();
+    });
+  });
+
+  $('#mode').addEventListener('change', event => {
+    state.mode = event.target.value;
+  });
+
+  $('#targetBond').addEventListener('change', syncTargetLevelDefault);
+
+  $('#addTarget').addEventListener('click', addTarget);
+
+  $('#presetAll').addEventListener('click', applyRewardPresets);
+
+  $('#presetClear').addEventListener('click', () => {
+    const presetBonds = new Set(allPresets.map(p => p.bondId));
+    state.targets = state.targets.filter(t => !presetBonds.has(t.bondId));
+    renderTargetEditor();
+  });
+
+  $('#presetList').addEventListener('change', event => {
+    const groupCheckbox = event.target.closest('[data-preset-group]');
+    if (groupCheckbox) {
+      const group = presetGroupById.get(groupCheckbox.getAttribute('data-preset-group'));
+      if (!group) return;
+      const presets = groupPresets(group);
+      if (groupCheckbox.checked) {
+        state.targets = normalizeTargets(state.targets.concat(
+          presets.map(preset => ({ bondId: preset.bondId, targetCount: preset.targetCount }))
+        ));
+      } else {
+        const groupBonds = new Set(presets.map(preset => preset.bondId));
+        state.targets = state.targets.filter(target => !groupBonds.has(target.bondId));
+      }
+      renderTargetEditor();
+      return;
+    }
+
+    const checkbox = event.target.closest('[data-preset]');
+    if (!checkbox) return;
+    const bondId = checkbox.getAttribute('data-preset');
+    const preset = rewardPresetMap.get(bondId);
+    if (preset == null) return;
+    if (checkbox.checked) {
+      state.targets = normalizeTargets(state.targets.concat({ bondId, targetCount: preset }));
+    } else {
+      state.targets = state.targets.filter(t => t.bondId !== bondId);
+    }
+    renderTargetEditor();
+  });
+
+  $('#resultTabs').addEventListener('click', event => {
+    const button = event.target.closest('[data-result-tab]');
+    if (!button) return;
+    state.resultTab = button.getAttribute('data-result-tab');
+    applyResultTab();
+  });
+
+  $('#starView').addEventListener('click', event => {
+    const button = event.target.closest('[data-star-view]');
+    if (!button) return;
+    state.starView = button.getAttribute('data-star-view');
+    setStarView();
+    if (state.result) renderStars(state.result);
+  });
+
+  $('#detailToggle').addEventListener('click', () => {
+    state.detail = !state.detail;
+    setDetailToggle();
+    if (state.result) renderLineup(state.result);
+    syncResultHeight();
+  });
+
+  $('#targetList').addEventListener('click', event => {
+    const button = event.target.closest('[data-remove-target]');
+    if (!button) return;
+    const bondId = button.getAttribute('data-remove-target');
+    state.targets = state.targets.filter(t => t.bondId !== bondId);
+    renderTargetEditor();
+  });
+
+  $('#solveBtn').addEventListener('click', solve);
+  $('#resetBtn').addEventListener('click', reset);
+
+  $('#enableAll').addEventListener('click', () => {
+    state.disabled.clear();
+    renderPool();
+  });
+
+  $('#disableAll').addEventListener('click', () => {
+    state.disabled = new Set(allChars.map(c => c.id));
+    state.pinned.clear();
+    renderPool();
+  });
+}
+
+function setStarView() {
+  document.querySelectorAll('[data-star-view]').forEach(button => {
+    button.classList.toggle('active', button.getAttribute('data-star-view') === state.starView);
+  });
+}
+
+function setDetailToggle() {
+  const button = $('#detailToggle');
+  if (!button) return;
+  button.classList.toggle('active', state.detail);
+  button.textContent = state.detail ? '收起详细' : '详细信息';
+}
+
+function syncPoolHeight() {
+  const panel = $('#conditionPanel');
+  const chars = $('#characterPoolCard');
+  if (!panel || !chars) return;
+  if (window.innerWidth <= 1120) {
+    chars.style.height = '';
+    chars.classList.remove('matched');
+    return;
+  }
+  const height = Math.round(panel.getBoundingClientRect().height);
+  if (height <= 0) return;
+  chars.style.height = height + 'px';
+  chars.classList.add('matched');
+}
+
+function syncResultHeight() {
+  const lineup = $('#lineupCard');
+  const panel = $('#resultPanel');
+  if (!lineup || !panel) return;
+  if (window.innerWidth <= 1120) {
+    panel.style.height = '';
+    panel.classList.remove('matched');
+    return;
+  }
+  const height = Math.round(lineup.getBoundingClientRect().height);
+  if (height <= 0) return;
+  panel.style.height = height + 'px';
+  panel.classList.add('matched');
+}
+
+bindEvents();
+renderPool();
+fillTargetBondOptions();
+renderPresetList();
+state.targets = [];
+renderTargetEditor();
+setStarView();
+setDetailToggle();
+
+const conditionPanel = $('#conditionPanel');
+if (conditionPanel && typeof ResizeObserver === 'function') {
+  new ResizeObserver(syncPoolHeight).observe(conditionPanel);
+}
+const lineupCard = $('#lineupCard');
+if (lineupCard && typeof ResizeObserver === 'function') {
+  new ResizeObserver(syncResultHeight).observe(lineupCard);
+}
+window.addEventListener('resize', syncPoolHeight);
+window.addEventListener('resize', syncResultHeight);
+syncPoolHeight();
+syncResultHeight();
+</script>
+</body>
+</html>
